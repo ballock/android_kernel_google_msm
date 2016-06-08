@@ -293,7 +293,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	card->ext_csd.rev = ext_csd[EXT_CSD_REV];
-	if (card->ext_csd.rev > 6) {
+	if (card->ext_csd.rev > 7) {
 		pr_err("%s: unrecognised EXT_CSD revision %d\n",
 			mmc_hostname(card->host), card->ext_csd.rev);
 		err = -EINVAL;
@@ -1532,6 +1532,8 @@ static int mmc_suspend(struct mmc_host *host)
 		err = mmc_card_sleep(host);
 	else if (!mmc_host_is_spi(host))
 		mmc_deselect_cards(host);
+
+	mmc_card_set_sleep(host->card);
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
 
 out:
@@ -1552,6 +1554,7 @@ static int mmc_resume(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
+	mmc_card_clr_sleep(host->card);
 	mmc_claim_host(host);
 	err = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);
@@ -1574,6 +1577,7 @@ static int mmc_power_restore(struct mmc_host *host)
 	mmc_disable_clk_scaling(host);
 
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
+	mmc_card_clr_sleep(host->card);
 	mmc_claim_host(host);
 	ret = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);
